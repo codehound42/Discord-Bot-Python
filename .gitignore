@@ -1,0 +1,7 @@
+# Files
+keys.py
+
+# Environment
+.vscode
+venv
+__pycache__
