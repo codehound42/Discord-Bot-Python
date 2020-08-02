@@ -3,6 +3,10 @@ from discord.ext import commands
 import keys
 from datetime import datetime
 import random
+from functools import reduce
+import requests
+import json
+
 
 ###########################
 # Globals
@@ -52,13 +56,17 @@ async def on_command_error(ctx, error):
 
 
 ###########################
-# Auxiliary Functions
+# Utilities
 ###########################
 
 def check_if_lucky(chance=0.5):
     def predicate(ctx):
         return random.random() < chance
     return commands.check(predicate)
+
+
+def post_data_to_webhook(url, message):
+    requests.post(url, data=json.dumps({'content': message}), headers={'Content-type': 'application/json'})
 
 
 ###########################
@@ -103,8 +111,17 @@ async def terminate(ctx):
     await client.logout()
 
 
+@client.command()
+@commands.dm_only()
+@commands.is_owner()
+async def echo(ctx, *args):
+    string_to_output = reduce(lambda acc, x: acc+x+' ', args, "")
+    post_data_to_webhook(keys.GENERAL_CHAT_WEBHOOK, string_to_output)
+    
+
 ###########################
 # Run Client
 ###########################
 
-client.run(keys.TOKEN)
+if __name__ == "__main__":
+    client.run(keys.TOKEN)
