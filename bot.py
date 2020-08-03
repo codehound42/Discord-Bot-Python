@@ -6,6 +6,7 @@ import random
 from functools import reduce
 import requests
 import json
+import googletrans
 
 
 ###########################
@@ -69,6 +70,10 @@ def post_data_to_webhook(url, message):
     requests.post(url, data=json.dumps({'content': message}), headers={'Content-type': 'application/json'})
 
 
+def reduce_args(args):
+    return reduce(lambda acc, x: acc+x+' ', args, "")
+
+
 ###########################
 # Commands
 ###########################
@@ -115,9 +120,24 @@ async def terminate(ctx):
 @commands.dm_only()
 @commands.is_owner()
 async def echo(ctx, *args):
-    string_to_output = reduce(lambda acc, x: acc+x+' ', args, "")
+    string_to_output = reduce_args(args)
     post_data_to_webhook(keys.GENERAL_CHAT_WEBHOOK, string_to_output)
-    
+
+
+@client.command(aliases=['tr'])
+async def translate(ctx, lang_to, *args):
+    """Translates the given text to the language `lang_to`.
+    The language translated from is automatically detected."""
+
+    lang_to = lang_to.lower()
+    if lang_to not in googletrans.LANGUAGES and lang_to not in googletrans.LANGCODES:
+        raise commands.BadArgument("Invalid language to translate text to")
+
+    text = reduce_args(args)
+    translator = googletrans.Translator()
+    text_translated = translator.translate(text, dest=lang_to).text
+    await ctx.send(text_translated)
+
 
 ###########################
 # Run Client
