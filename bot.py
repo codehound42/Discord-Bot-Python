@@ -52,7 +52,11 @@ async def on_message(message):
 
 @client.event
 async def on_command_error(ctx, error):
-    await ctx.send(error)
+    # Only show the raw error output to the discord user if it is not an internal exception
+    if isinstance(error, commands.CommandInvokeError):
+        await ctx.send("An error occured while processing the command, but don't worry, a team of highly trained dolphins have been dispatched and are currently looking into it.")
+    else:
+        await ctx.send(error)
     print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), "command exception", type(error), error)
 
 
@@ -68,10 +72,6 @@ def check_if_lucky(chance=0.5):
 
 def post_data_to_webhook(url, message):
     requests.post(url, data=json.dumps({'content': message}), headers={'Content-type': 'application/json'})
-
-
-def reduce_args(args):
-    return reduce(lambda acc, x: acc+x+' ', args, "")
 
 
 ###########################
@@ -120,8 +120,7 @@ async def terminate(ctx):
 @commands.dm_only()
 @commands.is_owner()
 async def echo(ctx, *args):
-    string_to_output = reduce_args(args)
-    post_data_to_webhook(keys.GENERAL_CHAT_WEBHOOK, string_to_output)
+    post_data_to_webhook(keys.GENERAL_CHAT_WEBHOOK, ' '.join(args))
 
 
 @client.command(aliases=['tr'])
@@ -133,7 +132,7 @@ async def translate(ctx, lang_to, *args):
     if lang_to not in googletrans.LANGUAGES and lang_to not in googletrans.LANGCODES:
         raise commands.BadArgument("Invalid language to translate text to")
 
-    text = reduce_args(args)
+    text = ' '.join(args)
     translator = googletrans.Translator()
     text_translated = translator.translate(text, dest=lang_to).text
     await ctx.send(text_translated)
