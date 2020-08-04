@@ -139,6 +139,19 @@ async def translate(ctx, lang_to, *args):
     await ctx.send(text_translated)
 
 
+@client.command()
+async def oracle(ctx, *args):
+    query = '+'.join(args)
+    url = f"https://api.wolframalpha.com/v1/result?i={query}%3F&appid={keys.WOLFRAM_ALPHA_API_KEY}"
+    response = requests.get(url)
+
+    if response.status_code == 501:
+        await ctx.send("Unable to process that query")
+        return
+
+    await ctx.send(response.text)
+
+
 ###########################
 # Run Client
 ###########################
