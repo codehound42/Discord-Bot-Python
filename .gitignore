@@ -5,3 +5,4 @@ keys.py
 .vscode
 venv
 __pycache__
+data

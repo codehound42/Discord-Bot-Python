@@ -1,12 +1,16 @@
 import discord
 from discord.ext import commands
 import keys
-from datetime import datetime
+import filepaths
+from datetime import datetime, date
 import random
 from functools import reduce
 import requests
 import json
 import googletrans
+import pickle
+import asyncio
+import os
 
 
 ###########################
@@ -74,6 +78,26 @@ def post_data_to_webhook(url, message):
     requests.post(url, data=json.dumps({'content': message}), headers={'Content-type': 'application/json'})
 
 
+def create_file_if_does_not_exist(file_name):
+    if os.path.isfile(file_name):
+        return
+
+    with open(file_name, 'wb') as output:
+        pickle.dump({}, output)
+
+
+async def send_chat_result_and_update_conversation(ctx, author_id_to_conversation, conversation):
+    if 'result' in conversation:
+        await ctx.send(conversation['result'])
+    else:
+        # WolframAlpha could not generate an answer so just return a default reply
+        await ctx.send("I don't know")
+
+    author_id_to_conversation[ctx.author.id] = (date.today(), conversation)
+    with open(filepaths.WOLFRAM_ALPHA_CHAT_CONVERSATIONS, 'wb') as output:
+        pickle.dump(author_id_to_conversation, output)
+
+
 ###########################
 # Commands
 ###########################
@@ -125,8 +149,10 @@ async def echo(ctx, *args):
 
 @client.command(aliases=['tr'])
 async def translate(ctx, lang_to, *args):
-    """Translates the given text to the language `lang_to`.
-    The language translated from is automatically detected."""
+    """
+    Translates the given text to the language `lang_to`.
+    The language translated from is automatically detected.
+    """
 
     lang_to = lang_to.lower()
     if lang_to not in googletrans.LANGUAGES and lang_to not in googletrans.LANGCODES:
@@ -138,10 +164,14 @@ async def translate(ctx, lang_to, *args):
     await ctx.send(text_translated)
 
 
-@client.command()
+@client.command(aliases=['wolframalpha', 'wa'])
 async def oracle(ctx, *args):
+    """
+    Answers questions and queries using WolframAlpha's Simple API
+    """
+
     query = '+'.join(args)
-    url = f"https://api.wolframalpha.com/v1/result?i={query}%3F&appid={keys.WOLFRAM_ALPHA_API_KEY}"
+    url = f"https://api.wolframalpha.com/v1/result?appid={keys.WOLFRAM_ALPHA_API_KEY}&i={query}%3F"
     response = requests.get(url)
 
     if response.status_code == 501:
@@ -149,6 +179,40 @@ async def oracle(ctx, *args):
         return
 
     await ctx.send(response.text)
+
+
+@client.command(aliases=['wolframalphachat', 'wac'])
+async def wolframAlphaChat(ctx, *args):
+    """
+    Interactive version of the !oracle command using WolframAlpha's Conversational API.
+    Previous conversations are set to expire after 24 hours.
+    """
+
+    lock = asyncio.Lock()
+    async with lock:
+        # Identify previous conversation between user and WolframAlpha server
+        create_file_if_does_not_exist(filepaths.WOLFRAM_ALPHA_CHAT_CONVERSATIONS)
+        with open(filepaths.WOLFRAM_ALPHA_CHAT_CONVERSATIONS, 'rb') as input:
+            author_id_to_conversation = pickle.load(input)
+        query = '+'.join(args)
+
+        # Resume existing conversation if exists and is not too long ago
+        if ctx.author.id in author_id_to_conversation:
+            last_conversation_date, last_conversation = author_id_to_conversation[ctx.author.id]
+            CONVERSATION_DAYS_EXPIRE_THRESHOLD = 1
+            time_delta = date.today() - last_conversation_date
+            if time_delta.days < CONVERSATION_DAYS_EXPIRE_THRESHOLD:
+                assert "wolframalpha.com" in last_conversation['host']
+                get_request_s_parameter_addition = f"&s={last_conversation['s']}" if 's' in last_conversation else ""
+                url = f"http://{last_conversation['host']}/api/v1/conversation.jsp?appid={keys.WOLFRAM_ALPHA_API_KEY}&conversationid={last_conversation['conversationID']}&i={query}%3f{get_request_s_parameter_addition}"
+                response = json.loads(requests.get(url).text)
+                await send_chat_result_and_update_conversation(ctx, author_id_to_conversation, response)
+                return
+            
+        # Start new conversation
+        url = f"http://api.wolframalpha.com/v1/conversation.jsp?appid={keys.WOLFRAM_ALPHA_API_KEY}&i={query}%3f"
+        response = json.loads(requests.get(url).text)
+        await send_chat_result_and_update_conversation(ctx, author_id_to_conversation, response)
 
 
 ###########################
