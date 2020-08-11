@@ -11,6 +11,7 @@ import googletrans
 import pickle
 import asyncio
 import os
+from cleverbot import Cleverbot
 
 
 ###########################
@@ -213,6 +214,42 @@ async def wolframAlphaChat(ctx, *args):
         url = f"http://api.wolframalpha.com/v1/conversation.jsp?appid={keys.WOLFRAM_ALPHA_API_KEY}&i={query}%3f"
         response = json.loads(requests.get(url).text)
         await send_chat_result_and_update_conversation(ctx, author_id_to_conversation, response)
+
+
+@client.command()
+async def chat(ctx):
+    def check_consistent_user_and_channel(message):
+        return message.author == ctx.message.author and message.channel == ctx.message.channel
+
+    STOP_SIGNAL = "_stop"
+
+    # Init connection
+    await ctx.send("Initialising chat session...")
+    cleverbot = Cleverbot()
+    await cleverbot.init_connection()
+    await ctx.send(f"{ctx.message.author.mention} Ready to chat... Type ``{STOP_SIGNAL}`` to stop the active chat session.")
+
+    # Active session
+    is_chat_active = True
+    while is_chat_active:
+        try:
+            # Wait for next chat message from user
+            message = await client.wait_for("message", check=check_consistent_user_and_channel, timeout=60.0)
+        except asyncio.TimeoutError:
+            await ctx.send(f"{ctx.message.author.mention} Took too long to receive a reply. Ending chat session...")
+            is_chat_active = False
+        else:
+            # Check for stop signal and intermediate commands, otherwise proceed with conversation
+            if message.content == STOP_SIGNAL:
+                await ctx.send(f"{ctx.message.author.mention} Until next time. Ending chat session...")
+                is_chat_active = False
+            elif message.content.startswith("!"):
+                pass
+            else:
+                response = await cleverbot.get_response(message.content)
+                await ctx.send(response)
+
+    await cleverbot.close()
 
 
 ###########################
