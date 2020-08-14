@@ -6,4 +6,4 @@ keys.py
 venv
 __pycache__
 data
-*.log
+logs

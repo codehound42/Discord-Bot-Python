@@ -22,6 +22,9 @@ client = discord.Client()
 client = commands.Bot(command_prefix='!')
 is_client_running = False
 
+# asyncio locks
+wolfram_alpha_chat_lock = asyncio.Lock()
+cleverbot_active_chat_sessions_lock = asyncio.Lock()
 
 ###########################
 # Events
@@ -62,7 +65,9 @@ async def on_command_error(ctx, error):
         await ctx.send("An error occured while processing the command, but don't worry, a team of highly trained dolphins have been dispatched and are currently looking into it.")
     else:
         await ctx.send(error)
+
     print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), "command exception", type(error), error)
+    raise error
 
 
 ###########################
@@ -79,12 +84,12 @@ def post_data_to_webhook(url, message):
     requests.post(url, data=json.dumps({'content': message}), headers={'Content-type': 'application/json'})
 
 
-def create_file_if_does_not_exist(file_name):
-    if os.path.isfile(file_name):
+def create_file_if_does_not_exist(filepath, initial_value):
+    if os.path.isfile(filepath):
         return
 
-    with open(file_name, 'wb') as output:
-        pickle.dump({}, output)
+    with open(filepath, 'wb') as output:
+        pickle.dump(initial_value, output)
 
 
 async def send_chat_result_and_update_conversation(ctx, author_id_to_conversation, conversation):
@@ -189,10 +194,9 @@ async def wolframAlphaChat(ctx, *args):
     Previous conversations are set to expire after 24 hours.
     """
 
-    lock = asyncio.Lock()
-    async with lock:
+    async with wolfram_alpha_chat_lock:
         # Identify previous conversation between user and WolframAlpha server
-        create_file_if_does_not_exist(filepaths.WOLFRAM_ALPHA_CHAT_CONVERSATIONS)
+        create_file_if_does_not_exist(filepaths.WOLFRAM_ALPHA_CHAT_CONVERSATIONS, dict())
         with open(filepaths.WOLFRAM_ALPHA_CHAT_CONVERSATIONS, 'rb') as input:
             author_id_to_conversation = pickle.load(input)
         query = '+'.join(args)
@@ -216,20 +220,34 @@ async def wolframAlphaChat(ctx, *args):
         await send_chat_result_and_update_conversation(ctx, author_id_to_conversation, response)
 
 
-@client.command()
+@client.command(aliases=['cleverbot', 'cleverbotChat', 'startChat'])
 async def chat(ctx):
     def check_consistent_user_and_channel(message):
         return message.author == ctx.message.author and message.channel == ctx.message.channel
-
     STOP_SIGNAL = "_stop"
 
-    # Init connection
-    await ctx.send("Initialising chat session...")
-    cleverbot = Cleverbot()
-    await cleverbot.init_connection()
-    await ctx.send(f"{ctx.message.author.mention} Ready to chat... Type ``{STOP_SIGNAL}`` to stop the active chat session.")
+    async with cleverbot_active_chat_sessions_lock:
+        create_file_if_does_not_exist(filepaths.CLEVERBOT_ACTIVE_CHAT_SESSIONS, set())
+        with open(filepaths.CLEVERBOT_ACTIVE_CHAT_SESSIONS, 'rb') as input:
+            author_ids_with_active_cleverbot_chat_sessions = pickle.load(input)
 
-    # Active session
+        # Check if user is already engaged in an active chat session
+        if ctx.author.id in author_ids_with_active_cleverbot_chat_sessions:
+            await ctx.send("You already have an active chat session. End it before starting a new one.")
+            return
+
+        # Init connection
+        await ctx.send("Initialising chat session...")
+        cleverbot = Cleverbot()
+        await cleverbot.init_connection()
+        await ctx.send(f"{ctx.message.author.mention} Ready to chat... Type ``{STOP_SIGNAL}`` to stop the active chat session.")
+
+        # Update active chat sessions file
+        author_ids_with_active_cleverbot_chat_sessions.add(ctx.author.id)
+        with open(filepaths.CLEVERBOT_ACTIVE_CHAT_SESSIONS, 'wb') as output:
+            pickle.dump(author_ids_with_active_cleverbot_chat_sessions, output)
+
+    ### Active session ###
     is_chat_active = True
     while is_chat_active:
         try:
@@ -247,9 +265,21 @@ async def chat(ctx):
                 pass
             else:
                 response = await cleverbot.get_response(message.content)
-                await ctx.send(response)
+                if response.strip() == "":
+                    # If could not fetch a cleverbot response then end the chat session
+                    await ctx.send("I'm done talking. Ending chat session...")
+                    is_chat_active = False
+                else:
+                    await ctx.send(response)
 
+    # Terminate connection and update active chat sessions file
     await cleverbot.close()
+    async with cleverbot_active_chat_sessions_lock:
+        with open(filepaths.CLEVERBOT_ACTIVE_CHAT_SESSIONS, 'rb') as input:
+            author_ids_with_active_cleverbot_chat_sessions = pickle.load(input)
+        author_ids_with_active_cleverbot_chat_sessions.remove(ctx.author.id)
+        with open(filepaths.CLEVERBOT_ACTIVE_CHAT_SESSIONS, 'wb') as output:
+            pickle.dump(author_ids_with_active_cleverbot_chat_sessions, output)
 
 
 ###########################
