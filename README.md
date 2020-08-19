@@ -1,6 +1,6 @@
 # Discord Python Bot
 
-A custom Discord bot with various features implemented using the [discord.py](https://github.com/Rapptz/discord.py) API wrapper for Discord.
+A custom Discord bot with various features implemented using the [discord.py](https://github.com/Rapptz/discord.py) API wrapper for Discord. You are welcome to use the source code of this project, but I would appreciate it if you give some attribution by linking to my GitHub page or YouTube channel :-)
 
 ## Installation
 Create a virtual environment (optional) and activate it:

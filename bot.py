@@ -12,6 +12,7 @@ import pickle
 import asyncio
 import os
 from cleverbot import Cleverbot
+from meme_generator import MemeGenerator
 
 
 ###########################
@@ -280,6 +281,13 @@ async def chat(ctx):
         author_ids_with_active_cleverbot_chat_sessions.remove(ctx.author.id)
         with open(filepaths.CLEVERBOT_ACTIVE_CHAT_SESSIONS, 'wb') as output:
             pickle.dump(author_ids_with_active_cleverbot_chat_sessions, output)
+
+
+@client.command(aliases=['meme'])
+async def generateMeme(ctx, meme_name, top_text="", bottom_text=""):
+    meme_generator = MemeGenerator()
+    meme_generator.generate_meme(meme_name, top_text, bottom_text)
+    await ctx.send(file=discord.File(meme_generator.memes_folder_path + 'meme_edited.jpg'))
 
 
 ###########################
