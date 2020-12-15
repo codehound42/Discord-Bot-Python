@@ -50,10 +50,10 @@ async def on_message(message):
     if message.content.lower().startswith('hello'):
         await message.channel.send(f"Hello {message.author.mention}")
         return
-    
+
     if not message.content.startswith('!'):
         return
-        
+
     # Process command
     await message.channel.trigger_typing()
     await client.process_commands(message)
@@ -214,7 +214,7 @@ async def wolframAlphaChat(ctx, *args):
                 response = json.loads(requests.get(url).text)
                 await send_chat_result_and_update_conversation(ctx, author_id_to_conversation, response)
                 return
-            
+
         # Start new conversation
         url = f"http://api.wolframalpha.com/v1/conversation.jsp?appid={keys.WOLFRAM_ALPHA_API_KEY}&i={query}%3f"
         response = json.loads(requests.get(url).text)
