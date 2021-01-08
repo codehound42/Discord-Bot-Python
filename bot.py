@@ -265,6 +265,7 @@ async def chat(ctx):
             elif message.content.startswith("!"):
                 pass
             else:
+                await ctx.trigger_typing()
                 response = await cleverbot.get_response(message.content)
                 if response.strip() == "":
                     # If could not fetch a cleverbot response then end the chat session
