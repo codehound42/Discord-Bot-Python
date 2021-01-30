@@ -14,7 +14,7 @@ Install requirements:
 pip install -r requirements.txt
 ```
 
-Create a ``keys.py`` file and define a ``TOKEN`` constant to be your Discord bot token. Throughout the project a number of extra keys and folders have also been added. Refer to my [tutorial videos on YouTube](https://www.youtube.com/playlist?list=PLoNbvI5hV5uO4YoSZp3dlJ0fz_8ssn1FX) or study the code for what to add to your environment in order to use the various commands.
+Create an ``.env`` file and define a ``TOKEN`` constant to be your Discord bot token. Throughout the project a number of extra keys and folders have also been added. Refer to my [tutorial videos on YouTube](https://www.youtube.com/playlist?list=PLoNbvI5hV5uO4YoSZp3dlJ0fz_8ssn1FX) or study the code for what to add to your environment in order to use the various commands. Refer to the .env.example file for the keys to fill out.
 
 ## Running the Bot
 ```bash

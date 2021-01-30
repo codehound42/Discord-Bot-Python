@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-import keys
 import filepaths
 from datetime import datetime, date
 import random
@@ -13,7 +12,12 @@ import asyncio
 import os
 from cleverbot import Cleverbot
 from meme_generator import MemeGenerator
+import dotenv
+import os
 
+
+# Load .env variables
+dotenv.load_dotenv()
 
 ###########################
 # Globals
@@ -151,7 +155,7 @@ async def terminate(ctx):
 @commands.dm_only()
 @commands.is_owner()
 async def echo(ctx, *args):
-    post_data_to_webhook(keys.GENERAL_CHAT_WEBHOOK, ' '.join(args))
+    post_data_to_webhook(os.getenv('GENERAL_CHAT_WEBHOOK'), ' '.join(args))
 
 
 @client.command(aliases=['tr'])
@@ -178,7 +182,7 @@ async def oracle(ctx, *args):
     """
 
     query = '+'.join(args)
-    url = f"https://api.wolframalpha.com/v1/result?appid={keys.WOLFRAM_ALPHA_API_KEY}&i={query}%3F"
+    url = f"https://api.wolframalpha.com/v1/result?appid={os.getenv('WOLFRAM_ALPHA_API_KEY')}&i={query}%3F"
     response = requests.get(url)
 
     if response.status_code == 501:
@@ -210,13 +214,13 @@ async def wolframAlphaChat(ctx, *args):
             if time_delta.days < CONVERSATION_DAYS_EXPIRE_THRESHOLD:
                 assert "wolframalpha.com" in last_conversation['host']
                 get_request_s_parameter_addition = f"&s={last_conversation['s']}" if 's' in last_conversation else ""
-                url = f"http://{last_conversation['host']}/api/v1/conversation.jsp?appid={keys.WOLFRAM_ALPHA_API_KEY}&conversationid={last_conversation['conversationID']}&i={query}%3f{get_request_s_parameter_addition}"
+                url = f"http://{last_conversation['host']}/api/v1/conversation.jsp?appid={os.getenv('WOLFRAM_ALPHA_API_KEY')}&conversationid={last_conversation['conversationID']}&i={query}%3f{get_request_s_parameter_addition}"
                 response = json.loads(requests.get(url).text)
                 await send_chat_result_and_update_conversation(ctx, author_id_to_conversation, response)
                 return
 
         # Start new conversation
-        url = f"http://api.wolframalpha.com/v1/conversation.jsp?appid={keys.WOLFRAM_ALPHA_API_KEY}&i={query}%3f"
+        url = f"http://api.wolframalpha.com/v1/conversation.jsp?appid={os.getenv('WOLFRAM_ALPHA_API_KEY')}&i={query}%3f"
         response = json.loads(requests.get(url).text)
         await send_chat_result_and_update_conversation(ctx, author_id_to_conversation, response)
 
@@ -296,4 +300,4 @@ async def generateMeme(ctx, meme_name, top_text="", bottom_text=""):
 ###########################
 
 if __name__ == "__main__":
-    client.run(keys.TOKEN)
+    client.run(os.getenv('TOKEN'))

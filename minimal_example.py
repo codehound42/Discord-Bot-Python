@@ -1,7 +1,10 @@
 import discord
 from discord.ext import commands
-import keys
+import dotenv
+import os
 
+
+dotenv.load_dotenv()
 client = discord.Client()
 client = commands.Bot(command_prefix='!')
 
@@ -27,4 +30,4 @@ async def terminate(ctx):
     await client.logout()
 
 
-client.run(keys.TOKEN)
+client.run(os.getenv('TOKEN'))

@@ -6,7 +6,7 @@ import asyncio
 
 
 class Cleverbot:
-    
+
     def __init__(self):
         # Init selenium options/arguments
         self.opts = Options()
@@ -54,7 +54,7 @@ class Cleverbot:
         except StaleElementReferenceException:
             if is_retry_attempt:
                 return ""
-            
+
             # Ensure form is focused properly after sudden page refreshes
             # The cleverbot website seems to refresh the page after some message exchanges and changes the url by appending /? followed by a low int
             await asyncio.sleep(3)

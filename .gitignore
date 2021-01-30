@@ -1,10 +1,12 @@
-# Files
-keys.py
-
 # Environment
-.vscode
-venv
-__pycache__
+.env
 data
 logs
 assets
+
+# Editor
+.vscode
+
+# Python
+venv
+__pycache__
