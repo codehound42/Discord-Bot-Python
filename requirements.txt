@@ -33,7 +33,7 @@ six==1.15.0
 sniffio==1.1.0
 soupsieve==2.0.1
 toml==0.10.1
-urllib3==1.25.10
+urllib3==1.26.5
 websockets==8.1
 wrapt==1.12.1
 yarl==1.4.2
