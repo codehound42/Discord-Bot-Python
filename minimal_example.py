@@ -5,29 +5,24 @@ import os
 
 
 dotenv.load_dotenv()
-client = discord.Client()
-client = commands.Bot(command_prefix='!')
+
+intents = discord.Intents.all()
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 
-@client.event
+@bot.event
 async def on_ready():
-    print(f"Bot {client.user.name} initialising...")
+    print(f"Bot initialising...")
 
 
-@client.event
+@bot.event
 async def on_message(message):
-    await client.process_commands(message)
+    await bot.process_commands(message)
 
 
-@client.command()
+@bot.command()
 async def ping(ctx):
     await ctx.send("pong!")
 
 
-@client.command()
-async def terminate(ctx):
-    await ctx.send("Terminating...")
-    await client.logout()
-
-
-client.run(os.getenv('TOKEN'))
+bot.run(os.getenv("TOKEN"))

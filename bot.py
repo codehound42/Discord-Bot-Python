@@ -23,9 +23,11 @@ dotenv.load_dotenv()
 # Globals
 ###########################
 
-client = discord.Client()
-client = commands.Bot(command_prefix='!')
+intents = discord.Intents.all()
+client = discord.Client(intents=intents)
+bot = commands.Bot(command_prefix='!', intents=intents)
 is_client_running = False
+
 
 # asyncio locks
 wolfram_alpha_chat_lock = asyncio.Lock()
@@ -35,19 +37,19 @@ cleverbot_active_chat_sessions_lock = asyncio.Lock()
 # Events
 ###########################
 
-@client.event
+@bot.event
 async def on_ready():
     global is_client_running
 
     if not is_client_running:
         is_client_running = True
-        print(f"Bot {client.user.name} initialising...")
+        print(f"Bot initialising...")
 
 
-@client.event
+@bot.event
 async def on_message(message):
-    # Avoid the bot replying to itself
-    if message.author == client.user:
+    # Avoid the bot replying to bots
+    if message.author.bot:
         return
 
     # Reply hello to hello messages
@@ -59,11 +61,11 @@ async def on_message(message):
         return
 
     # Process command
-    await message.channel.trigger_typing()
-    await client.process_commands(message)
+    async with message.channel.typing():
+        await bot.process_commands(message)
 
 
-@client.event
+@bot.event
 async def on_command_error(ctx, error):
     # Only show the raw error output to the discord user if it is not an internal exception
     if isinstance(error, commands.CommandInvokeError):
@@ -113,52 +115,52 @@ async def send_chat_result_and_update_conversation(ctx, author_id_to_conversatio
 # Commands
 ###########################
 
-@client.command()
+@bot.command()
 @commands.dm_only()
 async def ping(ctx):
     await ctx.send("pong!")
 
 
-@client.command()
+@bot.command()
 @commands.guild_only()
 async def ding(ctx):
     await ctx.send("dong!")
 
 
-@client.command()
+@bot.command()
 @commands.has_permissions(manage_webhooks=True)
 async def iBeDev(ctx):
     await ctx.send("you be dev")
 
 
-@client.command()
+@bot.command()
 @commands.has_any_role("admin", "moderator")
 async def randomRange(ctx, a, b):
     result = random.randrange(int(a), int(b))
     await ctx.send(f"Random int in range [{a}; {b}[: **{result}**")
 
 
-@client.command()
+@bot.command()
 @check_if_lucky()
 async def tryMyLuck(ctx):
     await ctx.send("You're lucky pal!!!")
 
 
-@client.command(aliases=['youHaveBeenTerminated'])
+@bot.command(aliases=['youHaveBeenTerminated'])
 @commands.is_owner()
 async def terminate(ctx):
     await ctx.send("Terminating...")
-    await client.logout()
+    await bot.close()
 
 
-@client.command()
+@bot.command()
 @commands.dm_only()
 @commands.is_owner()
 async def echo(ctx, *args):
     post_data_to_webhook(os.getenv('GENERAL_CHAT_WEBHOOK'), ' '.join(args))
 
 
-@client.command(aliases=['tr'])
+@bot.command(aliases=['tr'])
 async def translate(ctx, lang_to, *args):
     """
     Translates the given text to the language `lang_to`.
@@ -175,7 +177,7 @@ async def translate(ctx, lang_to, *args):
     await ctx.send(text_translated)
 
 
-@client.command(aliases=['wolframalpha', 'wa'])
+@bot.command(aliases=['wolframalpha', 'wa'])
 async def oracle(ctx, *args):
     """
     Answers questions and queries using WolframAlpha's Simple API
@@ -192,7 +194,7 @@ async def oracle(ctx, *args):
     await ctx.send(response.text)
 
 
-@client.command(aliases=['wolframalphachat', 'wac'])
+@bot.command(aliases=['wolframalphachat', 'wac'])
 async def wolframAlphaChat(ctx, *args):
     """
     Interactive version of the !oracle command using WolframAlpha's Conversational API.
@@ -225,7 +227,7 @@ async def wolframAlphaChat(ctx, *args):
         await send_chat_result_and_update_conversation(ctx, author_id_to_conversation, response)
 
 
-@client.command(aliases=['cleverbot', 'cleverbotChat', 'startChat'])
+@bot.command(aliases=['cleverbot', 'cleverbotChat', 'startChat'])
 async def chat(ctx):
     def check_consistent_user_and_channel(message):
         return message.author == ctx.message.author and message.channel == ctx.message.channel
@@ -257,7 +259,7 @@ async def chat(ctx):
     while is_chat_active:
         try:
             # Wait for next chat message from user
-            message = await client.wait_for("message", check=check_consistent_user_and_channel, timeout=60.0)
+            message = await bot.wait_for("message", check=check_consistent_user_and_channel, timeout=60.0)
         except asyncio.TimeoutError:
             await ctx.send(f"{ctx.message.author.mention} Took too long to receive a reply. Ending chat session...")
             is_chat_active = False
@@ -288,7 +290,7 @@ async def chat(ctx):
             pickle.dump(author_ids_with_active_cleverbot_chat_sessions, output)
 
 
-@client.command(aliases=['meme'])
+@bot.command(aliases=['meme'])
 async def generateMeme(ctx, meme_name, top_text="", bottom_text=""):
     meme_generator = MemeGenerator()
     meme_generator.generate_meme(meme_name, top_text, bottom_text)
@@ -300,4 +302,4 @@ async def generateMeme(ctx, meme_name, top_text="", bottom_text=""):
 ###########################
 
 if __name__ == "__main__":
-    client.run(os.getenv('TOKEN'))
+    bot.run(os.getenv('TOKEN'))
