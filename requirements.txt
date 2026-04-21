@@ -18,7 +18,7 @@ httpcore==0.9.1
 httpx==0.13.3
 hyperframe==5.2.0
 idna==3.7
-lxml==4.9.1
+lxml==6.1.0
 multidict==4.7.6
 outcome==1.2.0
 Pillow==12.2.0
