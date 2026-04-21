@@ -23,7 +23,7 @@ multidict==4.7.6
 outcome==1.2.0
 Pillow==12.2.0
 PySocks==1.7.1
-python-dotenv==0.21.0
+python-dotenv==1.2.2
 requests==2.33.0
 rfc3986==1.5.0
 selenium==4.5.0
